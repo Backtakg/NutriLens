@@ -32,7 +32,13 @@ This is a static browser app; no build step or application server is required.
 
 The first background-removal and AI-recognition runs need an internet connection to download browser libraries and model weights. Model assets are cached by the browser when supported. Background removal and CLIP suggestions run in the browser. Multi-food segmentation is an optional backend: images are sent to the API URL that the user explicitly configures in the food panel.
 
-## Multi-food segmentation backend\n\nThe backend source is in [`backend/`](backend/). It uses the [YOLO11l FoodSeg103 model](https://huggingface.co/arunapb/yolo11l-food-segmentation), a 103-class ingredient instance-segmentation checkpoint. Follow [`backend/README.md`](backend/README.md) to deploy it to a Hugging Face Docker Space, then paste the Space base URL into NutriLens under **Connect multi-food segmentation engine**. The model checkpoint is approximately 223 MB and downloads on first backend startup. Free CPU hosting can be slow and may sleep.\n\nThe browser does not automatically have a running backend: deployment and connection are required to enable the per-food masks. When connected, the uploaded/captured image is sent to that endpoint.\n\n## AI models and sources
+## Multi-food segmentation backend
+
+The optional backend is in [`backend/`](backend/). It uses the [YOLO11l FoodSeg103 model](https://huggingface.co/arunapb/yolo11l-food-segmentation), a 103-class ingredient instance-segmentation checkpoint. Deploy it as a **Gradio ZeroGPU Space** (not Docker) using [`backend/README.md`](backend/README.md), then paste the Space URL into NutriLens under **Connect multi-food segmentation engine**. The model checkpoint is approximately 223 MB and downloads during Space startup.
+
+The website connects through the official Gradio JavaScript client. The browser sends the selected/captured image to the public Space you configure. Free ZeroGPU has account eligibility and daily usage limits; it is suitable for testing, not unrestricted production traffic.
+
+## AI models and sources
 
 - Food matching: [Xenova/clip-vit-base-patch32](https://huggingface.co/Xenova/clip-vit-base-patch32), a CLIP ONNX model compatible with Transformers.js. The app uses zero-shot candidate matching against its food vocabulary.
 - Browser inference runtime: [Transformers.js](https://huggingface.co/docs/transformers.js).
