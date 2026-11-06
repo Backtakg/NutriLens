@@ -34,9 +34,9 @@ The first background-removal and AI-recognition runs need an internet connection
 
 ## Multi-food segmentation backend
 
-The optional backend is in [`backend/`](backend/). It uses the [YOLO11l FoodSeg103 model](https://huggingface.co/arunapb/yolo11l-food-segmentation), a 103-class ingredient instance-segmentation checkpoint. Deploy it as a **Gradio ZeroGPU Space** (not Docker) using [`backend/README.md`](backend/README.md), then paste the Space URL into NutriLens under **Connect multi-food segmentation engine**. The model checkpoint is approximately 223 MB and downloads during Space startup.
+The optional backend is in [`backend/`](backend/). It uses the [YOLO11l FoodSeg103 model](https://huggingface.co/arunapb/yolo11l-food-segmentation), a 103-class ingredient instance-segmentation checkpoint. Deploy it as a **Render Free Python Web Service** without Docker using [`backend/README.md`](backend/README.md), then paste the service URL into NutriLens under **Connect multi-food segmentation engine**. The model checkpoint is approximately 223 MB and downloads on the first segmentation request.
 
-The website connects through the official Gradio JavaScript client. The browser sends the selected/captured image to the public Space you configure. Free ZeroGPU has account eligibility and daily usage limits; it is suitable for testing, not unrestricted production traffic.
+The website sends the selected/captured image to the public FastAPI endpoint you configure. Render Free has limited memory, CPU-only inference and idle spin-down; YOLO11l may exceed its memory allowance. This is an accuracy-first feasibility test, not a promise of production performance.
 
 ## AI models and sources
 
