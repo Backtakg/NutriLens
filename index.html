@@ -70,9 +70,9 @@ async function removeBackground(){
   const result=await mod.removeBackground(originalFile,{progress:(key,current,total)=>{if(total)setStatus('Refining image edges…',Math.min(92,35+Math.round(current/total*55)))},output:{format:'image/png',quality:1}});
   cutoutBlob=result instanceof Blob?result:new Blob([result],{type:'image/png'});
   cutoutUrl=URL.createObjectURL(cutoutBlob);setStatus('Finishing transparent cutout…',100);
-  showPreview(cutoutUrl,false,true);$('resultActions').classList.remove('hidden');$('dragBtn').classList.remove('hidden');$('cutoutHint').classList.add('hidden');
+  showPreview(cutoutUrl,false,true);$('resultActions').classList.remove('hidden');$('resultActions').style.display='flex';$('dragBtn').classList.remove('hidden');$('cutoutHint').classList.add('hidden');
   setTimeout(()=>$('processRow').classList.add('hidden'),450);
- }catch(err){console.error(err);$('processRow').classList.add('hidden');$('stageActions').style.display='flex';alert('Background removal could not start. Check your internet connection and try again. The image has not been uploaded to NutriLens.');}
+ }catch(err){console.error(err);$('processRow').classList.add('hidden');$('stageActions').classList.remove('hidden');$('stageActions').style.display='flex';alert('Background removal could not start. Check your internet connection and try again. The image has not been uploaded to NutriLens.');}
  finally{$('removeBgBtn').disabled=false}
 }
 $('removeBgBtn').onclick=removeBackground;
@@ -91,8 +91,8 @@ function renderNutrition(){
  host.querySelectorAll('[data-remove]').forEach(el=>el.onclick=()=>{analysisItems.splice(+el.dataset.remove,1);renderNutrition()});
  const total=analysisItems.reduce((s,it)=>s+nutrition[it.name].kcal*it.grams/100,0),p=analysisItems.reduce((s,it)=>s+nutrition[it.name].p*it.grams/100,0),c=analysisItems.reduce((s,it)=>s+nutrition[it.name].c*it.grams/100,0),f=analysisItems.reduce((s,it)=>s+nutrition[it.name].f*it.grams/100,0);
  host.insertAdjacentHTML('beforeend','<div class="total"><div><small>Estimated meal total</small><em>Based on selected portions</em></div><strong>'+Math.round(total)+' <small style="display:inline;color:#668071">kcal</small></strong></div><div class="macro"><div><b>'+p.toFixed(1)+'g</b><span>Protein</span></div><div><b>'+c.toFixed(1)+'g</b><span>Carbs</span></div><div><b>'+f.toFixed(1)+'g</b><span>Fat</span></div></div><div class="notice">Estimates use generic reference values per 100 g. A photo cannot determine exact weight, ingredients or cooking oil. Check and adjust every item before relying on the total.</div>');
- saveHistory(Math.round(total));
 }
+
 $('addFoodBtn').onclick=()=>{const n=$('foodSelect').value;if(!n)return;addItem(n);$('foodSelect').value=''};
 async function analyze(){
  if(!originalFile)return;$('analyzeBtn').disabled=true;$('analyzeBtn').textContent='Loading food vision model…';$('foodResults').innerHTML='<div class="emptyresult"><span class="spinner" style="display:inline-block;vertical-align:middle"></span> Loading the food recognition model. First use may download model files.</div>';
@@ -104,6 +104,7 @@ async function analyze(){
   analysisItems=[];
   for(const r of found){const name=String(r.label).toLowerCase();if(!analysisItems.some(x=>x.name===name))analysisItems.push({name,confidence:r.score,grams:100})}
   renderNutrition();
+  if(analysisItems.length){const total=analysisItems.reduce((s,it)=>s+nutrition[it.name].kcal*it.grams/100,0);saveHistory(total)}
   if(!analysisItems.length)$('foodResults').innerHTML='<div class="emptyresult">The model did not confidently recognize a supported food in this image. Add foods manually below. Recognition currently supports common items such as fruit, broccoli, sandwich, pizza, hot dog, donut and cake.</div>';
   saveHistory(analysisItems.reduce((s,it)=>s+nutrition[it.name].kcal*it.grams/100,0));
  }catch(err){console.error(err);$('foodResults').innerHTML='<div class="notice">The free in-browser recognition model could not load. Check your connection, or add visible foods manually below. No image was sent to a NutriLens server.</div>'; $('manualRow').classList.remove('hidden')}
