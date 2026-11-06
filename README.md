@@ -7,9 +7,12 @@
 - Responsive, minimal food-image workspace.
 - JPG, PNG, and WEBP upload with drag-and-drop.
 - Client-side background removal using IMG.LY IS-Net FP16, transparent PNG output, progress feedback, and GPU-to-CPU fallback.
-- Bottom-to-top reveal animation, original/cutout preview, PNG download, and drag-out support.
+- Automatic background removal after upload or camera capture, with a bottom-to-top reveal animation.
+- Live camera capture using the device camera (HTTPS and browser permission required).
 - Zero-shot image-to-food matching using CLIP through Transformers.js.
-- Food vocabulary spanning fruits, vegetables, grains, proteins, common meals, and Nepali dishes.
+- Expanded food vocabulary spanning ingredients, common Indian dishes, and Nepali dishes (including momo, dal bhat, sel roti, kwati, gundruk soup, thukpa, and more).
+- Optional multi-food instance segmentation API using a YOLO11l-seg model trained on FoodSeg103 (103 ingredient classes), with per-region polygon masks, labels, and confidence scores.
+- Ingredient nutrition mappings for supported segmentation classes; unknown classes remain visible without fabricated nutrition values.
 - AI suggestions are shown for user confirmation; NutriLens does not silently turn a weak prediction into a confirmed food.
 - Editable serving sizes with estimated calories, protein, carbohydrates, and fat.
 - Local analysis history stored in the current browser.
@@ -27,9 +30,9 @@ This is a static browser app; no build step or application server is required.
 
 3. Open `http://localhost:8000`.
 
-The first background-removal and AI-recognition runs need an internet connection to download browser libraries and model weights. Model assets are cached by the browser when supported. Images are processed in the browser; this project does not upload them to a NutriLens backend.
+The first background-removal and AI-recognition runs need an internet connection to download browser libraries and model weights. Model assets are cached by the browser when supported. Background removal and CLIP suggestions run in the browser. Multi-food segmentation is an optional backend: images are sent to the API URL that the user explicitly configures in the food panel.
 
-## AI models and sources
+## Multi-food segmentation backend\n\nThe backend source is in [`backend/`](backend/). It uses the [YOLO11l FoodSeg103 model](https://huggingface.co/arunapb/yolo11l-food-segmentation), a 103-class ingredient instance-segmentation checkpoint. Follow [`backend/README.md`](backend/README.md) to deploy it to a Hugging Face Docker Space, then paste the Space base URL into NutriLens under **Connect multi-food segmentation engine**. The model checkpoint is approximately 223 MB and downloads on first backend startup. Free CPU hosting can be slow and may sleep.\n\nThe browser does not automatically have a running backend: deployment and connection are required to enable the per-food masks. When connected, the uploaded/captured image is sent to that endpoint.\n\n## AI models and sources
 
 - Food matching: [Xenova/clip-vit-base-patch32](https://huggingface.co/Xenova/clip-vit-base-patch32), a CLIP ONNX model compatible with Transformers.js. The app uses zero-shot candidate matching against its food vocabulary.
 - Browser inference runtime: [Transformers.js](https://huggingface.co/docs/transformers.js).
@@ -40,13 +43,15 @@ The first background-removal and AI-recognition runs need an internet connection
 
 - **No model can promise perfect recognition.** CLIP is a general zero-shot vision-language model, not a food-only diagnostic system. It ranks the available prompts and can still confuse similar foods, mixed dishes, ingredients, or unfamiliar presentation styles.
 - A model score is a relative match score, not a calibrated probability. The user should confirm the food name before adding it to the nutrition calculation.
-- The current analysis ranks foods for the image as a whole. It does not yet perform robust per-item instance segmentation/counting for every ingredient in a mixed plate. Multiple foods can be added after reviewing suggestions or using the food list.
+- The FoodSeg103 segmentation model covers 103 ingredient classes, not every Indian or Nepali dish. Regional dish suggestions are separately ranked by CLIP and are not pixel-level segmentation.
+- Segmentation is not perfect: overlapping, mixed, tiny, occluded or unfamiliar foods may be missed or mislabeled. The model is trained on FoodSeg103 and is not validated as a comprehensive India/Nepal food recognizer.
+- The optional API is CPU-based and may be slow or cold-start on free hosting. It is still image inference, not live video segmentation.
 - Nutrition figures are estimates per 100 g. A photograph alone cannot reliably determine serving weight, hidden ingredients, cooking oil, recipe, or preparation method. Mixed Nepali dish values vary by household and restaurant.
 - Do not use these estimates as medical or clinical nutrition advice.
 
 ## Licensing note
 
-The IMG.LY background-removal JavaScript project is published under AGPL-3.0. Review its licence and your distribution obligations before using this dependency in a closed-source or commercial product. The CLIP ONNX model card lists MIT licensing. Third-party model and runtime terms apply.
+The IMG.LY background-removal JavaScript project is published under AGPL-3.0. The optional FoodSeg103 YOLO model card states Apache-2.0; review the upstream model and dataset terms before commercial use. Review its licence and your distribution obligations before using this dependency in a closed-source or commercial product. The CLIP ONNX model card lists MIT licensing. Third-party model and runtime terms apply.
 
 ## Next engineering milestones
 
