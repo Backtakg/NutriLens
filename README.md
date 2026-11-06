@@ -1,59 +1,58 @@
 # NutriLens
 
-**See your food differently.** NutriLens is a browser-based food image workspace that combines transparent background removal with food recognition and an editable nutrition estimate.
+**See your food differently.** A privacy-first browser food studio for image cutouts, AI-assisted food suggestions, and editable nutrition estimates.
 
-## Current MVP
+## Current experience
 
-- Upload, choose, or drag-and-drop JPG, PNG, and WEBP images (up to 10 MB).
-- Remove image backgrounds and export a transparent PNG.
-- Smooth bottom-to-top reveal animation.
-- Drag the isolated image from the preview into compatible apps.
-- Detect a limited set of common food categories with an in-browser object-detection model.
-- Add foods manually when the model cannot recognize them.
-- Adjust serving sizes and calculate estimated calories, protein, carbohydrates, and fat.
-- Keep a small analysis history in browser LocalStorage.
-- Responsive desktop and mobile layout.
+- Responsive, minimal food-image workspace.
+- JPG, PNG, and WEBP upload with drag-and-drop.
+- Client-side background removal using IMG.LY IS-Net FP16, transparent PNG output, progress feedback, and GPU-to-CPU fallback.
+- Bottom-to-top reveal animation, original/cutout preview, PNG download, and drag-out support.
+- Zero-shot image-to-food matching using CLIP through Transformers.js.
+- Food vocabulary spanning fruits, vegetables, grains, proteins, common meals, and Nepali dishes.
+- AI suggestions are shown for user confirmation; NutriLens does not silently turn a weak prediction into a confirmed food.
+- Editable serving sizes with estimated calories, protein, carbohydrates, and fat.
+- Local analysis history stored in the current browser.
 
-## Run locally
+## Run it
 
-No build step is required for the static MVP.
+This is a static browser app; no build step or application server is required.
 
-1. Clone this repository.
-2. Open `index.html` through a local static server (recommended) or deploy the repository with GitHub Pages.
-3. For example, with Python installed:
+1. Clone the repository.
+2. Serve the repository root using a local static server, for example:
 
    ```bash
    python -m http.server 8000
    ```
 
-4. Visit `http://localhost:8000`.
+3. Open `http://localhost:8000`.
 
-The first use of background removal and food recognition requires an internet connection to load the open-source browser libraries and model assets. The image processing runs in the browser; NutriLens does not provide an image-upload backend.
+The first background-removal and AI-recognition runs need an internet connection to download browser libraries and model weights. Model assets are cached by the browser when supported. Images are processed in the browser; this project does not upload them to a NutriLens backend.
 
-## Free/open-source browser dependencies
+## AI models and sources
 
-- [@imgly/background-removal](https://github.com/imgly/background-removal-js) for client-side image background removal.
-- [Transformers.js](https://github.com/huggingface/transformers.js) with the DETR ResNet-50 model for object detection.
-- [Google Fonts](https://fonts.google.com/) for typography (the app falls back to system fonts).
+- Food matching: [Xenova/clip-vit-base-patch32](https://huggingface.co/Xenova/clip-vit-base-patch32), a CLIP ONNX model compatible with Transformers.js. The app uses zero-shot candidate matching against its food vocabulary.
+- Browser inference runtime: [Transformers.js](https://huggingface.co/docs/transformers.js).
+- Background removal: [IMG.LY background-removal-js](https://github.com/imgly/background-removal-js), using the IS-Net FP16 model. See the library's [configuration and model notes](https://www.npmjs.com/package/@imgly/background-removal).
+- Nutrition reference: generic food-composition estimates informed by common per-100 g food reference values. See [USDA FoodData Central](https://fdc.nal.usda.gov/) for a public reference database. The manually curated values in this MVP are not a live USDA lookup and some mixed/Nepali dish entries are broad recipe averages.
 
-Model weights and runtime assets are downloaded from their respective CDNs on first use. Hosting and usage policies of those services apply.
+## Accuracy and known limitations
 
-## Important limitations
+- **No model can promise perfect recognition.** CLIP is a general zero-shot vision-language model, not a food-only diagnostic system. It ranks the available prompts and can still confuse similar foods, mixed dishes, ingredients, or unfamiliar presentation styles.
+- A model score is a relative match score, not a calibrated probability. The user should confirm the food name before adding it to the nutrition calculation.
+- The current analysis ranks foods for the image as a whole. It does not yet perform robust per-item instance segmentation/counting for every ingredient in a mixed plate. Multiple foods can be added after reviewing suggestions or using the food list.
+- Nutrition figures are estimates per 100 g. A photograph alone cannot reliably determine serving weight, hidden ingredients, cooking oil, recipe, or preparation method. Mixed Nepali dish values vary by household and restaurant.
+- Do not use these estimates as medical or clinical nutrition advice.
 
-- **No 100% calorie accuracy:** a 2D image cannot establish exact food weight, hidden ingredients, cooking oil, recipe, or preparation method.
-- The initial object-detection model recognizes only a limited set of common COCO classes that overlap with food (for example apple, banana, orange, broccoli, carrot, sandwich, pizza, hot dog, donut, and cake). It is not a specialist multi-food segmentation model.
-- Nutrition values are generic reference estimates per 100 g. Serving weights begin at 100 g and must be checked or edited by the user.
-- Multiple overlapping foods, regional dishes, mixed meals, and small ingredients may be missed or misidentified.
-- This is an informational prototype, not medical advice or a clinical nutrition tool.
+## Licensing note
 
-## Roadmap
+The IMG.LY background-removal JavaScript project is published under AGPL-3.0. Review its licence and your distribution obligations before using this dependency in a closed-source or commercial product. The CLIP ONNX model card lists MIT licensing. Third-party model and runtime terms apply.
 
-- Add a dedicated food segmentation model that can identify multiple overlapping foods.
-- Improve edge refinement and transparent cutout quality testing.
-- Expand nutrition references with cited sources and regional foods.
-- Add confidence-aware portion estimation and explicit user confirmation.
-- Add exportable nutrition reports and a meal diary.
+## Next engineering milestones
 
-## License
-
-MIT
+- Evaluate a dedicated food/produce model on a test set containing corn, banana, similar fruits, vegetables, and mixed dishes.
+- Add region proposals and per-item detection so multiple foods can be identified independently.
+- Replace broad recipe averages with a source-linked nutrition database and regional recipe variants.
+- Add portion estimation with explicit uncertainty and user correction.
+- Add browser-based mask refinement tools (erase/restore brush) for difficult edges.
+- Add automated browser tests for upload, model errors, PNG transparency, and serving-size recalculation.
