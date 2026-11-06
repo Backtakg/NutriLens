@@ -144,7 +144,7 @@ async function analyze(runId=autoRun){
    const {pipeline,env}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
    env.allowLocalModels=false;
    foodClassifier=await pipeline('zero-shot-image-classification','Xenova/clip-vit-base-patch32',{dtype:'q4',
-    progress_callback:p=>{if(p.status==='progress'&&p.total)$('analyzeBtn').textContent='Loading AI '+Math.round(p.progress)+'%'}
+    progress_callback:p=>{if(p.status==='progress'&&p.total)$('autoStatus').textContent='Loading food AI '+Math.round(p.progress)+'%' }
    });
   }
   if(runId!==autoRun)return;
