@@ -1,3 +1,9 @@
+---
+title: NutriLens Food Segmentation API
+sdk: docker
+app_port: 7860
+---
+
 # NutriLens Food Segmentation API
 
 This optional API adds **multi-instance ingredient segmentation** to the static NutriLens website. It uses the public `arunapb/yolo11l-food-segmentation` YOLO11l-seg checkpoint trained on FoodSeg103 (103 ingredient classes).
