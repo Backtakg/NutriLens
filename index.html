@@ -89,14 +89,20 @@ async function removeBackground(){
   const remove=mod.default||mod.removeBackground;
   if(typeof remove!=='function')throw new Error('Background removal module export was not found.');
   setStatus('Preparing image and segmentation engine…',18);
-  const result=await remove(originalFile,{
+  const baseConfig={
    model:'isnet_fp16',
-   device:(navigator.gpu?'gpu':'cpu'),
    output:{format:'image/png',quality:1},
    progress:(key,current,total)=>{
     if(total){const pct=Math.min(88,20+Math.round(current/total*65));setStatus('Loading AI model and refining edges…',pct)}
    }
-  });
+  };
+  let result;
+  if(navigator.gpu){
+   try{result=await remove(originalFile,{...baseConfig,device:'gpu'})}
+   catch(gpuError){console.warn('GPU segmentation unavailable; retrying on CPU.',gpuError);setStatus('Switching to compatibility mode…',32);result=await remove(originalFile,{...baseConfig,device:'cpu'})}
+  }else{
+   result=await remove(originalFile,{...baseConfig,device:'cpu'})
+  }
   if(!(result instanceof Blob)||!result.size)throw new Error('The segmentation model returned an empty image.');
   cutoutBlob=result;cutoutUrl=URL.createObjectURL(result);setStatus('Compositing transparent PNG…',96);
   showPreview(cutoutUrl,false,true);$('resultActions').classList.remove('hidden');$('resultActions').style.display='flex';$('dragBtn').classList.remove('hidden');$('cutoutHint').classList.add('hidden');
@@ -143,7 +149,7 @@ async function analyze(){
   if(!foodClassifier){
    const {pipeline,env}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
    env.allowLocalModels=false;
-   foodClassifier=await pipeline('zero-shot-image-classification','Xenova/clip-vit-base-patch32',{
+   foodClassifier=await pipeline('zero-shot-image-classification','Xenova/clip-vit-base-patch32',{dtype:'q4',
     progress_callback:p=>{if(p.status==='progress'&&p.total)$('analyzeBtn').textContent='Loading AI '+Math.round(p.progress)+'%'}
    });
   }
