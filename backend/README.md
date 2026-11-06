@@ -1,41 +1,41 @@
 ---
-title: NutriLens Food Segmentation API
-sdk: docker
-app_port: 7860
+title: NutriLens Food Segmentation
+sdk: gradio
+app_file: app.py
+python_version: "3.12"
+suggested_hardware: zero-a10g
 ---
 
-# NutriLens Food Segmentation API
+# NutriLens · Free ZeroGPU segmentation backend
 
-This optional API adds **multi-instance ingredient segmentation** to the static NutriLens website. It uses the public `arunapb/yolo11l-food-segmentation` YOLO11l-seg checkpoint trained on FoodSeg103 (103 ingredient classes).
+This is the optional multi-food segmentation service for the static NutriLens website. It uses the public `arunapb/yolo11l-food-segmentation` YOLO11l-seg checkpoint trained on FoodSeg103 (103 ingredient classes).
 
-## Deploy it free on Hugging Face Spaces
+## Deploy without Docker
 
-1. Create a new public Space at https://huggingface.co/new-space.
-2. Choose **Docker** as the Space SDK and the free CPU hardware tier.
-3. Upload the contents of this `backend/` folder to the Space repository root: `app.py`, `requirements.txt`, and `Dockerfile`.
-4. Wait for the first build. On first startup, the service downloads the approximately 223 MB `best.pt` checkpoint from Hugging Face; this can take a while.
-5. Open the Space URL, for example `https://YOUR-SPACE-NAME.hf.space/health`. A healthy response should include `"status":"ok"`.
-6. Open NutriLens, expand **Connect multi-food segmentation engine**, paste the Space base URL (without `/segment`), and press **Save**.
-7. Upload or capture a food photo. NutriLens will call `POST /segment` and display each returned ingredient mask and label.
+1. Sign in to Hugging Face and open https://huggingface.co/new-space.
+2. Choose a **Gradio** Space (not Docker), set it to **Public**, and create it.
+3. In the Space Settings → Hardware, select **ZeroGPU** (shown as ZeroGPU / zero-a10g).
+4. Upload the contents of this folder to the Space repository root: `app.py`, `requirements.txt`, and this `README.md`.
+5. Wait for the build and initial model download. The model checkpoint is approximately 223 MB.
+6. Open the Space page and check that the Gradio interface loads.
+7. In NutriLens, expand **Connect multi-food segmentation engine** and paste the Space URL, for example `https://YOUR-USERNAME-nutrilens-food-api.hf.space`. Save, then upload a test photo.
 
-## API
+The website connects using the official Gradio JavaScript client and calls the `/segment` endpoint. No Hugging Face token is required for a public Space.
 
-- `GET /` service information
-- `GET /health` health status
-- `POST /segment` multipart form field `file` (JPG, PNG or WEBP, maximum 10 MB)
+## Free-tier limits
 
-The response contains image dimensions and an `instances` array. Each instance has a class label, model score, bounding box and polygon contour in source-image pixel coordinates.
+Hugging Face's current documentation says eligible free personal accounts in good standing (verified email and account older than 30 days) can host up to two ZeroGPU Spaces. Free accounts have a limited shared GPU allowance (currently documented as 5 GPU minutes per 24-hour usage window). Availability, quota and eligibility are controlled by Hugging Face and may change. If ZeroGPU is unavailable for your account, do not select paid hardware; keep the app disconnected until an eligible free option is available.
 
 ## Model coverage and limitations
 
-FoodSeg103 has 103 ingredient classes, including common produce, rice, corn, noodles, meat, fish, tofu, mushrooms and other ingredients. It is **not a complete India/Nepal dish catalogue**. Foods such as momo, dal bhat, thukpa, idli, dosa, biryani and regional curries may need separate dish recognition; NutriLens keeps its CLIP-based photo suggestions and expanded South Asian food candidates for that purpose. Segmentation may miss tiny, mixed, covered or overlapping ingredients, and a region's label can be wrong. Confirm results before using nutrition estimates.
+FoodSeg103 has 103 ingredient classes, including common produce, rice, corn, noodles, meat, fish, tofu and mushrooms. It is **not a complete India/Nepal dish catalogue**. Dishes such as momo, dal bhat, thukpa, idli, dosa, biryani and regional curries need separate dish-level recognition and/or region-specific training. Small, mixed, hidden or overlapping ingredients can be missed or mislabeled. Confirm results before using nutrition estimates.
 
-The backend currently runs inference on CPU. First startup and inference can be slow on free CPU hardware; it is not a real-time video segmentation service. Camera capture is supported, but the captured still image is segmented after capture.
+The endpoint returns source-image dimensions and an `instances` array. Each instance includes a label, confidence score, bounding box and polygon contour in source-image pixel coordinates.
 
-## Privacy and cost
+## Privacy and public access
 
-The browser sends the selected image to the Space URL you configure. Do not connect a public backend if you need strictly on-device processing. Free hardware availability, sleeping/cold-start behaviour and usage limits are controlled by Hugging Face and may change. Public Spaces are internet-accessible; do not upload sensitive images.
+The browser sends the selected image to the public Space URL configured in NutriLens. Do not connect it if you need strictly on-device processing or are uploading sensitive images. Public Spaces can be called by other people and may consume the Space owner's limited GPU allowance. This MVP has no user authentication or per-user quota controls; keep an eye on usage and disable the connection when not testing.
 
 ## Model and licensing
 
-Model: https://huggingface.co/arunapb/yolo11l-food-segmentation (Apache-2.0 model card; FoodSeg103 benchmark). The API code in this folder is provided under the MIT License. Review upstream model and dataset terms before commercial redistribution.
+Model: https://huggingface.co/arunapb/yolo11l-food-segmentation (model card states Apache-2.0). The backend code is provided under the repository's MIT License. Review upstream model and dataset terms before commercial redistribution.
