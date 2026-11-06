@@ -39,7 +39,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
  <section class="card info">
   <div class="step">02 / FOOD INTELLIGENCE</div><h3 style="margin-top:9px">Identify your food</h3><div class="sub">Food-focused AI suggests likely matches. Confirm each item before adding its nutrition.</div>
   <div class="analysis-status" id="autoStatus">Add a photo to remove its background, recognise foods and segment visible ingredients.</div>
-  <div class="seg-config"><details><summary>Connect multi-food segmentation engine</summary><p>Paste your private deployment URL after setting up the free backend from this project. Without it, NutriLens uses its existing photo-level AI suggestions.</p><div class="seg-config-row"><input id="segApiUrl" type="url" placeholder="https://your-space.hf.space"><button class="btn soft" id="saveSegApi">Save</button></div></details></div><div id="segmentStatus" class="analysis-status">Multi-food masks will appear when the segmentation service is connected.</div><div id="segmentResults"></div><div id="aiSuggestions"></div><div id="foodResults"><div class="emptyresult">Your nutrition breakdown will appear here after you confirm a food match.</div></div>
+  <div class="seg-config"><details><summary>Connect multi-food segmentation engine</summary><p>Paste your public Gradio ZeroGPU Space URL after setting up the free backend from this project. Without it, NutriLens uses its existing photo-level AI suggestions.</p><div class="seg-config-row"><input id="segApiUrl" type="url" placeholder="https://your-space.hf.space"><button class="btn soft" id="saveSegApi">Save</button></div></details></div><div id="segmentStatus" class="analysis-status">Multi-food masks will appear when the segmentation service is connected.</div><div id="segmentResults"></div><div id="aiSuggestions"></div><div id="foodResults"><div class="emptyresult">Your nutrition breakdown will appear here after you confirm a food match.</div></div>
   <div class="recognition hidden" id="manualRow"><select id="foodSelect" aria-label="Add food item"><option value="">Add a food manually…</option></select><button class="btn soft" id="addFoodBtn">Add</button></div>
  </section>
  
@@ -133,16 +133,19 @@ function renderFoodSegments(data){
 }
 async function segmentFoodImage(runId){
  const api=(localStorage.getItem('nutrilens-segmentation-api')||'').trim().replace(/\/$/,'');
- if(!api){$('segmentStatus').textContent='Segmentation service not connected. Deploy the backend included in this repository, then paste its URL above.';return}
+ if(!api){$('segmentStatus').textContent='Segmentation service not connected. Deploy the free Gradio ZeroGPU Space described in backend/README.md, then paste its URL above.';return}
  if(!originalFile)return;
- $('segmentStatus').innerHTML='<span class="auto-pulse"></span>Finding and outlining individual food regions…';
+ $('segmentStatus').innerHTML='<span class="auto-pulse"></span>Connecting to ZeroGPU and finding food regions…';
  try{
-  const form=new FormData();form.append('file',originalFile,originalFile.name||'food-photo.jpg');
-  const response=await fetch(api+'/segment',{method:'POST',body:form});
-  if(!response.ok)throw new Error('Segmentation service returned HTTP '+response.status);
-  const data=await response.json();if(runId!==autoRun)return;
-  renderFoodSegments(data);$('segmentStatus').textContent='Food segmentation complete · '+(data.instances||[]).length+' regions found.';
- }catch(err){console.error('Food segmentation:',err);if(runId===autoRun)$('segmentStatus').textContent='Could not reach segmentation service. Check the saved URL and that the backend is running.'}
+  const {Client,handle_file}=await import('https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js');
+  const client=await Client.connect(api);
+  if(runId!==autoRun)return;
+  const result=await client.predict('/segment',[handle_file(originalFile)]);
+  if(runId!==autoRun)return;
+  const data=Array.isArray(result.data)?result.data[0]:result.data;
+  if(!data||!Array.isArray(data.instances))throw new Error('The Space returned an unexpected result.');
+  renderFoodSegments(data);$('segmentStatus').textContent='Food segmentation complete · '+data.instances.length+' regions found.';
+ }catch(err){console.error('Food segmentation:',err);if(runId===autoRun)$('segmentStatus').textContent='Could not reach the Gradio Space. Check its URL, build status and ZeroGPU quota.'}
 }
 $('segApiUrl').value=localStorage.getItem('nutrilens-segmentation-api')||'';
 $('saveSegApi').onclick=()=>{const v=$('segApiUrl').value.trim().replace(/\/$/,'');if(v&&!/^https:\/\//i.test(v)){alert('Please use your HTTPS backend URL.');return}localStorage.setItem('nutrilens-segmentation-api',v);$('segmentStatus').textContent=v?'Service URL saved. Upload a photo to run multi-food segmentation.':'Segmentation service disconnected.'};
