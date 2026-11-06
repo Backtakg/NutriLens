@@ -1,41 +1,47 @@
----
-title: NutriLens Food Segmentation
-sdk: gradio
-app_file: app.py
-python_version: "3.12"
-suggested_hardware: zero-a10g
----
+# NutriLens · Render Free segmentation backend
 
-# NutriLens · Free ZeroGPU segmentation backend
+This optional API adds multi-food ingredient segmentation to the static NutriLens website. It uses the YOLO11l-seg checkpoint `arunapb/yolo11l-food-segmentation`, trained on FoodSeg103 (103 ingredient classes).
 
-This is the optional multi-food segmentation service for the static NutriLens website. It uses the public `arunapb/yolo11l-food-segmentation` YOLO11l-seg checkpoint trained on FoodSeg103 (103 ingredient classes).
+## Deploy to Render without Docker
 
-## Deploy without Docker
+1. Push this repository to GitHub and sign in to [Render](https://render.com/).
+2. Choose **New → Web Service** and connect `Backtakg/NutriLens`.
+3. Set **Root Directory** to `backend`.
+4. Choose the **Python** runtime.
+5. Set **Build Command** to `pip install -r requirements.txt`.
+6. Set **Start Command** to `uvicorn app:app --host 0.0.0.0 --port $PORT`.
+7. Select the **Free** instance type and create the service.
+8. After deployment, open `https://YOUR-SERVICE.onrender.com/health`. It should return JSON with `"status":"ok"`.
+9. Copy the service's base HTTPS URL. In NutriLens, open **Connect multi-food segmentation engine**, paste the URL, save, and upload a test image.
 
-1. Sign in to Hugging Face and open https://huggingface.co/new-space.
-2. Choose a **Gradio** Space (not Docker), set it to **Public**, and create it.
-3. In the Space Settings → Hardware, select **ZeroGPU** (shown as ZeroGPU / zero-a10g).
-4. Upload the contents of this folder to the Space repository root: `app.py`, `requirements.txt`, and this `README.md`.
-5. Wait for the build and initial model download. The model checkpoint is approximately 223 MB.
-6. Open the Space page and check that the Gradio interface loads.
-7. In NutriLens, expand **Connect multi-food segmentation engine** and paste the Space URL, for example `https://YOUR-USERNAME-nutrilens-food-api.hf.space`. Save, then upload a test photo.
+No Dockerfile, paid hardware, or paid subscription is required for this setup. Render builds the Python service from the requirements file.
 
-The website connects using the official Gradio JavaScript client and calls the `/segment` endpoint. No Hugging Face token is required for a public Space.
+## Important free-tier performance warning
 
-## Free-tier limits
+The chosen YOLO11l checkpoint is approximately 223 MB before Python, PyTorch, Ultralytics and inference memory are counted. Render Free has a small memory allowance and CPU-only execution. The service may fail to load the model, run out of memory, or take a long time per image. This deployment deliberately keeps YOLO11l as the first accuracy-focused experiment; it does not promise that the model will fit or perform acceptably on every free instance.
 
-Hugging Face's current documentation says eligible free personal accounts in good standing (verified email and account older than 30 days) can host up to two ZeroGPU Spaces. Free accounts have a limited shared GPU allowance (currently documented as 5 GPU minutes per 24-hour usage window). Availability, quota and eligibility are controlled by Hugging Face and may change. If ZeroGPU is unavailable for your account, do not select paid hardware; keep the app disconnected until an eligible free option is available.
+The model is loaded lazily on the first segmentation request so the health endpoint can respond before the model is loaded. The first request can take substantially longer because it downloads the checkpoint and initializes the model. Render Free services also sleep when idle and need time to wake.
+
+If Render reports an out-of-memory restart, do not repeatedly send large images. Review the service logs first. We can then measure whether further CPU/memory optimization is realistic before considering any model change. No paid upgrade is assumed.
+
+## API
+
+- `GET /` — service information.
+- `GET /health` — health status and whether the model has been loaded.
+- `POST /segment` — multipart form upload with the image in the `file` field.
+
+The segmentation response contains the source image width and height plus an `instances` array. Each instance includes a label, confidence score, bounding box and polygon in original-image pixel coordinates. The API accepts image uploads up to 12 MB and resizes very large images for inference while mapping masks back to the original dimensions.
 
 ## Model coverage and limitations
 
-FoodSeg103 has 103 ingredient classes, including common produce, rice, corn, noodles, meat, fish, tofu and mushrooms. It is **not a complete India/Nepal dish catalogue**. Dishes such as momo, dal bhat, thukpa, idli, dosa, biryani and regional curries need separate dish-level recognition and/or region-specific training. Small, mixed, hidden or overlapping ingredients can be missed or mislabeled. Confirm results before using nutrition estimates.
+FoodSeg103 covers 103 ingredient categories; it is not a complete catalogue of Nepali and Indian dishes. It does not guarantee recognition of momo, dal-bhat, thukpa, dosa, biryani, curries or every regional preparation as complete dishes. Dish-level recognition is a separate task. Small, hidden, overlapping or mixed ingredients can be missed or mislabeled. Validate outputs against a representative Nepal/India test set before making accuracy claims.
 
-The endpoint returns source-image dimensions and an `instances` array. Each instance includes a label, confidence score, bounding box and polygon contour in source-image pixel coordinates.
+Nutrition calculations remain in the NutriLens website and are approximate per-100 g reference estimates. A segmentation mask does not determine serving weight, recipe, hidden ingredients or cooking oil.
 
 ## Privacy and public access
 
-The browser sends the selected image to the public Space URL configured in NutriLens. Do not connect it if you need strictly on-device processing or are uploading sensitive images. Public Spaces can be called by other people and may consume the Space owner's limited GPU allowance. This MVP has no user authentication or per-user quota controls; keep an eye on usage and disable the connection when not testing.
+When a user configures this API URL, NutriLens sends the selected image to this Render service for processing. The endpoint is publicly reachable and this MVP does not include authentication, rate limiting or per-user quotas. Do not upload sensitive images. Add appropriate access controls before exposing it to unrestricted public traffic.
 
-## Model and licensing
+## License
 
-Model: https://huggingface.co/arunapb/yolo11l-food-segmentation (model card states Apache-2.0). The backend code is provided under the repository's MIT License. Review upstream model and dataset terms before commercial redistribution.
+The upstream model card states Apache-2.0. Review upstream model and dataset terms before commercial redistribution. Backend source code is covered by the repository's MIT License.
